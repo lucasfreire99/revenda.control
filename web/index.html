@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Revenda+ | Controle Financeiro</title>
+    <meta name="description" content="Controle financeiro para revendedoras: estoque, vendas, lucro e relatórios. Funciona offline e pode ser instalado no celular ou computador.">
+    <meta name="theme-color" content="#4a6cf7">
+    <meta name="color-scheme" content="light dark">
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Revenda+">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <!-- Favicons -->
+    <link rel="icon" href="favicon.ico" sizes="48x48">
+    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="icons/favicon-16.png" type="image/png" sizes="16x16">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+    <script src="js/theme-init.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+    <script defer src="vendor/chart.umd.js"></script>
+    <script defer src="vendor/supabase.js"></script>
+</head>
+<body data-auth="loading">
+    <a class="skip-link" href="#main">Ir para o conteúdo</a>
+
+    <!-- ===== Carregando (antes de saber se há sessão) ===== -->
+    <div id="splash" class="splash" role="status">
+        <img src="icons/favicon.svg" width="56" height="56" alt="">
+        <p>Carregando…</p>
+    </div>
+
+    <!-- ===== Entrar / criar conta ===== -->
+    <div id="authScreen" class="auth-screen" hidden>
+        <div class="auth-card">
+            <div class="auth-brand">
+                <img src="icons/favicon.svg" width="48" height="48" alt="">
+                <div><strong>Revenda+</strong><small>Controle Financeiro</small></div>
+            </div>
+
+            <p id="authMsg" class="auth-msg" role="alert" hidden></p>
+
+            <!-- login -->
+            <section data-panel="login" aria-labelledby="loginTitle">
+                <h1 id="loginTitle" class="auth-title">Entrar</h1>
+                <form id="loginForm" novalidate>
+                    <div class="form-group"><label for="loginEmail">E-mail</label>
+                        <input id="loginEmail" type="email" autocomplete="username email" inputmode="email" required></div>
+                    <div class="form-group"><label for="loginPassword">Senha</label>
+                        <input id="loginPassword" type="password" autocomplete="current-password" required></div>
+                    <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+                </form>
+                <p class="auth-links">
+                    <button class="link-btn" type="button" data-go="forgot">Esqueci minha senha</button>
+                    <button class="link-btn" type="button" data-go="signup">Criar conta</button>
+                </p>
+            </section>
+
+            <!-- criar conta -->
+            <section data-panel="signup" aria-labelledby="signupTitle" hidden>
+                <h1 id="signupTitle" class="auth-title">Criar conta</h1>
+                <form id="signupForm" novalidate>
+                    <div class="form-group"><label for="signupName">Seu nome</label>
+                        <input id="signupName" type="text" autocomplete="name" maxlength="120"></div>
+                    <div class="form-group"><label for="signupEmail">E-mail</label>
+                        <input id="signupEmail" type="email" autocomplete="username email" inputmode="email" required></div>
+                    <div class="form-group"><label for="signupPassword">Senha (mínimo 8 caracteres)</label>
+                        <input id="signupPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+                    <button class="btn btn-primary btn-block" type="submit">Criar conta</button>
+                </form>
+                <p class="auth-links"><button class="link-btn" type="button" data-go="login">Já tenho conta</button></p>
+            </section>
+
+            <!-- confirmar e-mail com código -->
+            <section data-panel="confirm" aria-labelledby="confirmTitle" hidden>
+                <h1 id="confirmTitle" class="auth-title">Confirme seu e-mail</h1>
+                <p>Enviamos um código para <strong data-email></strong>. Digite-o abaixo. Olhe também a caixa de spam.</p>
+                <form id="confirmForm" novalidate>
+                    <div class="form-group"><label for="confirmCode">Código</label>
+                        <input id="confirmCode" class="code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required></div>
+                    <button class="btn btn-primary btn-block" type="submit">Confirmar</button>
+                </form>
+                <p class="auth-links">
+                    <button class="link-btn" type="button" id="resendBtn">Reenviar código</button>
+                    <button class="link-btn" type="button" data-go="login">Voltar</button>
+                </p>
+                <p class="hint">Já tem conta com este e-mail? Volte e entre, ou recupere a senha.</p>
+            </section>
+
+            <!-- esqueci a senha -->
+            <section data-panel="forgot" aria-labelledby="forgotTitle" hidden>
+                <h1 id="forgotTitle" class="auth-title">Recuperar senha</h1>
+                <p>Informe seu e-mail e enviaremos um código para criar uma nova senha.</p>
+                <form id="forgotForm" novalidate>
+                    <div class="form-group"><label for="forgotEmail">E-mail</label>
+                        <input id="forgotEmail" type="email" autocomplete="username email" inputmode="email" required></div>
+                    <button class="btn btn-primary btn-block" type="submit">Enviar código</button>
+                </form>
+                <p class="auth-links"><button class="link-btn" type="button" data-go="login">Voltar</button></p>
+            </section>
+
+            <!-- nova senha com código -->
+            <section data-panel="reset" aria-labelledby="resetTitle" hidden>
+                <h1 id="resetTitle" class="auth-title">Nova senha</h1>
+                <p>Digite o código enviado para <strong data-email></strong> e escolha a nova senha.</p>
+                <form id="resetForm" novalidate>
+                    <div class="form-group"><label for="resetCode">Código</label>
+                        <input id="resetCode" class="code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required></div>
+                    <div class="form-group"><label for="resetPassword">Nova senha (mínimo 8 caracteres)</label>
+                        <input id="resetPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+                    <button class="btn btn-primary btn-block" type="submit">Salvar nova senha</button>
+                </form>
+                <p class="auth-links"><button class="link-btn" type="button" data-go="login">Voltar</button></p>
+            </section>
+
+            <!-- nova senha (veio pelo link do e-mail) -->
+            <section data-panel="newpass" aria-labelledby="newpassTitle" hidden>
+                <h1 id="newpassTitle" class="auth-title">Escolha uma nova senha</h1>
+                <form id="newpassForm" novalidate>
+                    <div class="form-group"><label for="newpassPassword">Nova senha (mínimo 8 caracteres)</label>
+                        <input id="newpassPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+                    <button class="btn btn-primary btn-block" type="submit">Salvar nova senha</button>
+                </form>
+            </section>
+
+            <!-- configuração ausente -->
+            <section data-panel="setup" aria-labelledby="setupTitle" hidden>
+                <h1 id="setupTitle" class="auth-title">Falta configurar</h1>
+                <p id="setupText"></p>
+                <p class="hint">O passo a passo está no arquivo README.md do projeto.</p>
+            </section>
+        </div>
+    </div>
+
+    <header class="app-header">
+        <a class="brand" href="#home" data-nav="home">
+            <img src="icons/favicon.svg" width="32" height="32" alt="">
+            <span class="brand-text">Revenda+ <small>Controle Financeiro</small></span>
+        </a>
+
+        <nav class="tabs" aria-label="Seções do app">
+            <a href="#home" data-nav="home"><span class="tab-icon" aria-hidden="true">🏠</span><span>Início</span></a>
+            <a href="#launches" data-nav="launches"><span class="tab-icon" aria-hidden="true">📦</span><span>Lançamentos</span></a>
+            <a href="#data" data-nav="data"><span class="tab-icon" aria-hidden="true">👤</span><span>Conta</span></a>
+        </nav>
+
+        <div class="header-actions">
+            <button id="syncBtn" class="sync-btn" type="button" data-state="synced" title="Sincronização com a nuvem">
+                <span id="syncIcon" aria-hidden="true">✓</span><span id="syncLabel">Sincronizado</span>
+            </button>
+            <button id="installBtn" class="btn btn-secondary btn-sm" type="button" hidden>Instalar app</button>
+            <button id="themeToggle" class="icon-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">
+                <span id="themeIcon" aria-hidden="true">🌙</span>
+            </button>
+        </div>
+    </header>
+
+    <main id="main" tabindex="-1">
+        <noscript><p class="empty">O Revenda+ precisa do JavaScript ativado para funcionar.</p></noscript>
+
+        <!-- ===== Início ===== -->
+        <section id="home" class="section" aria-labelledby="homeTitle">
+            <h1 id="homeTitle" class="sr-only">Início</h1>
+
+            <div id="loadingBanner" class="banner" role="status" hidden>
+                <span id="loadingBannerText">Carregando seus dados…</span>
+                <button id="loadingRetry" class="btn btn-sm btn-warning" type="button" hidden>Tentar de novo</button>
+            </div>
+
+            <div id="backupBanner" class="banner" role="status" hidden>
+                <span id="backupBannerText">Faça um backup dos seus dados.</span>
+                <button id="backupBannerBtn" class="btn btn-sm btn-warning" type="button">Fazer backup agora</button>
+            </div>
+
+            <div class="stats-container" aria-label="Resumo financeiro">
+                <div class="stat-card">
+                    <div class="stat-label">Total investido</div>
+                    <div class="stat-value" id="totalInvestido">R$ 0,00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total vendido</div>
+                    <div class="stat-value" id="totalVendido">R$ 0,00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Lucro líquido</div>
+                    <div class="stat-value" id="lucroLiquido">R$ 0,00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Lucro potencial do estoque</div>
+                    <div class="stat-value" id="lucroPotencial">R$ 0,00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Margem sobre vendas</div>
+                    <div class="stat-value" id="margemGeral">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Unidades em estoque</div>
+                    <div class="stat-value" id="unidadesEstoque">0</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title" id="formTitle">Cadastrar novo produto</h2>
+                <form id="productForm" autocomplete="off">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="categoria">Categoria</label>
+                            <select id="categoria" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dataLancamento">Data de lançamento</label>
+                            <input type="date" id="dataLancamento" required>
+                        </div>
+                        <div class="form-group form-wide">
+                            <label for="nomeProduto">Nome do produto</label>
+                            <input type="text" id="nomeProduto" placeholder="Ex: Hidratante Corporal" maxlength="120" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="quantidade">Quantidade</label>
+                            <input type="number" id="quantidade" min="1" max="999" step="1" value="1" inputmode="numeric" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="valorCompra">Valor de compra (R$)</label>
+                            <input type="number" id="valorCompra" step="0.01" min="0" placeholder="0,00" inputmode="decimal" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="valorVenda">Valor de venda (R$)</label>
+                            <input type="number" id="valorVenda" step="0.01" min="0" placeholder="0,00" inputmode="decimal" required>
+                        </div>
+                    </div>
+
+                    <p id="priceHint" class="hint" aria-live="polite"></p>
+                    <p id="priceWarning" class="warning-text" role="alert" hidden></p>
+
+                    <label id="applyGroupWrap" class="check" hidden>
+                        <input type="checkbox" id="applyGroup">
+                        <span id="applyGroupText">Aplicar a todas as unidades iguais em estoque</span>
+                    </label>
+
+                    <div class="form-actions">
+                        <button type="submit" id="submitBtn" class="btn btn-primary">Adicionar produto</button>
+                        <button type="button" id="cancelEdit" class="btn btn-secondary" hidden>Cancelar edição</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Desempenho mensal</h2>
+                <div class="chart-container">
+                    <canvas id="monthlyChart" role="img" aria-label="Gráfico de compras, vendas e lucro dos últimos 6 meses"></canvas>
+                </div>
+                <p class="hint">Compras pela data de lançamento; vendas e lucro pela data em que a venda foi registrada.</p>
+            </div>
+        </section>
+
+        <!-- ===== Lançamentos ===== -->
+        <section id="launches" class="section" aria-labelledby="launchesTitle">
+            <h1 id="launchesTitle" class="sr-only">Lançamentos</h1>
+
+            <div class="card">
+                <h2 class="card-title">Filtros</h2>
+                <div class="filters">
+                    <div class="form-group">
+                        <label for="filterSearch">Buscar por nome</label>
+                        <input type="search" id="filterSearch" placeholder="Ex: hidratante">
+                    </div>
+                    <div class="form-group">
+                        <label for="filterMonth">Mês (lançamento ou venda)</label>
+                        <input type="month" id="filterMonth">
+                    </div>
+                    <div class="form-group">
+                        <label for="filterCategory">Categoria</label>
+                        <select id="filterCategory"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filterStatus">Status</label>
+                        <select id="filterStatus">
+                            <option value="">Todos</option>
+                            <option value="estoque">Em estoque</option>
+                            <option value="vendido">Vendidos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="toolbar">
+                    <div class="segmented" role="group" aria-label="Modo de visualização">
+                        <button type="button" id="modeGrouped" aria-pressed="true">Agrupado</button>
+                        <button type="button" id="modeItems" aria-pressed="false">Unidade por unidade</button>
+                    </div>
+                    <div class="toolbar-actions">
+                        <button id="resetFilters" class="btn btn-secondary" type="button">Limpar filtros</button>
+                        <button id="exportReports" class="btn btn-success" type="button">Exportar para Excel</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Lista de produtos</h2>
+                <p id="resultCount" class="hint" aria-live="polite"></p>
+                <div id="productsContainer" class="products-grid"></div>
+            </div>
+        </section>
+
+        <!-- ===== Conta e dados ===== -->
+        <section id="data" class="section" aria-labelledby="dataTitle">
+            <h1 id="dataTitle" class="sr-only">Conta e dados</h1>
+
+            <div class="card">
+                <h2 class="card-title">Minha conta</h2>
+                <p><strong id="accountName"></strong><br><span id="accountEmail" class="hint"></span></p>
+                <p id="syncInfo" class="hint"></p>
+                <div class="toolbar-actions stack">
+                    <button id="syncNowBtn" class="btn btn-secondary" type="button">Sincronizar agora</button>
+                    <button id="changePasswordBtn" class="btn btn-secondary" type="button">Trocar senha</button>
+                    <button id="signOutBtn" class="btn btn-secondary" type="button">Sair</button>
+                </div>
+            </div>
+
+            <div id="legacyCard" class="card" hidden>
+                <h2 class="card-title">Dados da versão antiga</h2>
+                <p>Encontramos <strong id="legacyCount">0</strong> unidade(s) salvas neste aparelho pela versão antiga do app. Importe para sua conta para não perdê-las.</p>
+                <button id="legacyImportBtn" class="btn btn-primary" type="button">Importar para minha conta</button>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Backup dos dados</h2>
+                <p>Seus dados ficam guardados na sua conta, na nuvem, e uma cópia fica neste aparelho para funcionar sem internet. Mesmo assim, um backup em arquivo é uma segurança extra.</p>
+                <p id="dataInfo" class="hint"></p>
+                <div class="toolbar-actions stack">
+                    <button id="exportBackup" class="btn btn-primary" type="button">Baixar backup (.json)</button>
+                    <label class="btn btn-secondary file-btn" for="importFile">Restaurar de um backup</label>
+                    <input type="file" id="importFile" accept="application/json,.json" hidden>
+                </div>
+                <p id="storageInfo" class="hint"></p>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Instalar o app</h2>
+                <p>O Revenda+ funciona como aplicativo: abre em tela cheia, tem ícone próprio e continua funcionando sem internet (as alterações são enviadas quando a conexão voltar).</p>
+                <ul class="plain-list">
+                    <li><strong>Android / Chrome / Edge:</strong> use o botão <em>Instalar app</em> no topo da página.</li>
+                    <li id="iosHint"><strong>iPhone / iPad (Safari):</strong> toque em Compartilhar e depois em <em>Adicionar à Tela de Início</em>.</li>
+                </ul>
+                <p id="installStatus" class="hint"></p>
+            </div>
+
+            <div class="card danger-zone">
+                <h2 class="card-title">Zona de perigo</h2>
+                <p>Apagar os produtos remove todos os dados da sua conta (na nuvem e neste aparelho). Você poderá desfazer logo em seguida, enquanto a mensagem estiver na tela.</p>
+                <div class="toolbar-actions stack">
+                    <button id="clearAll" class="btn btn-danger" type="button">Apagar todos os produtos</button>
+                    <button id="deleteAccountBtn" class="btn btn-danger" type="button">Excluir minha conta</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <button class="close-modal" id="closeModal" type="button" aria-label="Fechar">&times;</button>
+            <h2 id="modalTitle">Detalhes</h2>
+            <div class="modal-content" id="modalBody"></div>
+            <div class="modal-actions" id="modalActions"></div>
+        </div>
+    </div>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

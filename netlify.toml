@@ -1,0 +1,3 @@
+# Netlify: publica a pasta web/ (sem build). Os cabeçalhos vêm de web/_headers.
+[build]
+  publish = "web"
